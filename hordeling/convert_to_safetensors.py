@@ -1,8 +1,9 @@
+from safetensors.torch import load_file, save_file
+
 import os
 import requests
 import hashlib
 from collections import defaultdict
-from safetensors.torch import load_file, save_file
 from pathlib import Path
 from loguru import logger
 import torch
@@ -36,26 +37,21 @@ def convert_file(
     sf_filename: str,
 ):
     loaded = torch.load(pt_filename, map_location="cpu")
-    if "state_dict" in loaded:
-        loaded = loaded["state_dict"]
-    shared = shared_pointers(loaded)
-    for shared_weights in shared:
-        for name in shared_weights[1:]:
-            loaded.pop(name)
+    model_tensors = loaded.get('string_to_param').get('*')
 
-    # For tensors to be contiguous
-    loaded = {k: v.contiguous() for k, v in loaded.items()}
+    s_model = {
+          'emb_params': model_tensors
+            }
+
 
     dirname = os.path.dirname(sf_filename)
     os.makedirs(dirname, exist_ok=True)
-    save_file(loaded, sf_filename, metadata={"format": "pt"})
+    save_file(s_model, sf_filename, metadata={"format": "pt"})
     check_file_size(sf_filename, pt_filename)
     reloaded = load_file(sf_filename)
-    for k in loaded:
-        pt_tensor = loaded[k]
-        sf_tensor = reloaded[k]
-        if not torch.equal(pt_tensor, sf_tensor):
-            raise RuntimeError(f"The output tensors do not match for key {k}")
+
+    if not torch.equal(model_tensors, reloaded["emb_params"]):
+        raise RuntimeError("The output tensors do not match")
 
 def download_and_convert_pickletensor(pt_url: str, model_metadata: dict):
     response = requests.get(pt_url, timeout=5)
@@ -74,3 +70,4 @@ def download_and_convert_pickletensor(pt_url: str, model_metadata: dict):
         outfile.write(response.content)
 
     convert_file(filename, filename.with_suffix('.safetensors'))
+
