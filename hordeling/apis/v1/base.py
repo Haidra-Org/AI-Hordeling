@@ -5,7 +5,7 @@ from hordeling.flask import cache
 from loguru import logger
 from hordeling import exceptions as e
 from hordeling import civitai
-from hordeling.safetensors import download_and_convert_pickletensor
+from hordeling.convert_to_safetensors import download_and_convert_pickletensor
 
 api = Namespace('v1', 'API Version 1' )
 
