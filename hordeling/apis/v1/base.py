@@ -4,6 +4,7 @@ from flask_restx import Namespace, Resource, reqparse
 from hordeling.flask import cache
 from loguru import logger
 from hordeling import exceptions as e
+from hordeling import civitai
 
 api = Namespace('v1', 'API Version 1' )
 
@@ -32,8 +33,17 @@ class Embedding(Resource):
     @logger.catch(reraise=True)
     @cache.cached(timeout=10, query_string=True)
     @api.marshal_with(models.response_model_download_url, code=200, description='Download URL', skip_none=True)
-    def get(self, id):
+    def get(self, model_id: str):
         '''Ensure the download URL for an embedding is a safetensor
         '''
         self.args = self.get_parser.parse_args()
-        return {"instances": sus_instances},200
+        if not model_id.isdigit():
+            raise e.BadRequest("You can only pass CivitAI mdoel IDs")
+        mmetadata = civitai.retrieve_model_metadata(model_id)
+        if not civitai.is_safe(mmetadata):
+            raise e.BadRequest(f"{mmetadata['name']} has not passed the CivitAI pickle scanner succesfully")
+        if mmetadata["type"] != "TextualInversion":
+            raise e.BadRequest(f"{mmetadata['name']} is not an Embedding / Textual Inversion")
+        if sft_download := civitai.get_safetensor(mmetadata):
+            return {"url": sft_download},200
+        return {"url": f"hello world {model_id} "},200

@@ -1,7 +1,7 @@
 import os
 import socket
 
-from loguru import logger
+from hordeling.logger import logger
 from hordeling.flask import APP
 from hordeling.routes import *
 from hordeling.apis import apiv1
