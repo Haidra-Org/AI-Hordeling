@@ -108,5 +108,3 @@ def download_and_convert_pickletensor(pt_url: str, model_metadata: dict):
         outfile.write(response.content)
 
     convert_file(filename, filename.with_suffix('.safetensors'))
-
-convert_file("bin/LulaCipher.bin", "bin/LulaCipher.safetensors")
