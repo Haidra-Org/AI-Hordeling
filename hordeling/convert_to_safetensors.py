@@ -8,6 +8,8 @@ from pathlib import Path
 from loguru import logger
 import torch
 
+from pathlib import Path
+
 def shared_pointers(tensors):
     ptrs = defaultdict(list)
     for k, v in tensors.items():
@@ -33,25 +35,61 @@ def check_file_size(sf_filename: str, pt_filename: str):
 
 
 def convert_file(
-    pt_filename: str,
-    sf_filename: str,
+    input_filename: str,  
+    safetensors_filename: str, 
 ):
-    loaded = torch.load(pt_filename, map_location="cpu")
-    model_tensors = loaded.get('string_to_param').get('*')
+    """Convert a PyTorch model (*.pt or *.bin) to SafeTensors format
 
-    s_model = {
-          'emb_params': model_tensors
-            }
+    Args:
+        input_filename (str): The input file name
+        safetensors_filename (str): The file name to save the converted model to
 
+    """
+    # Load the model from the input file
+    loaded_model = torch.load(input_filename, map_location="cpu")
 
-    dirname = os.path.dirname(sf_filename)
+    # Get the file extension
+    extension = Path(input_filename).suffix
+    
+    model_to_save = None
+    model_tensors = None
+    
+    # If the file is a PyTorch .pt file
+    if extension == ".pt":
+        # Get the model tensors
+        model_tensors = loaded_model.get('string_to_param').get('*')
+
+        # Create a dictionary with the embedding parameters
+        model_to_save = {
+            'emb_params': model_tensors
+        }
+
+    # If the file is a fairseq .bin file
+    if extension == ".bin":
+        # Remove shared weights from the model
+        shared = shared_pointers(loaded_model)
+        for shared_weights in shared:
+            for name in shared_weights[1:]:
+                loaded_model.pop(name)
+        # Create a dictionary with the model parameters
+        model_to_save = {k: v.contiguous() for k, v in loaded_model.items()}
+        model_tensors = list(model_to_save.values())[0]
+
+    # Create the output directory if it doesn't exist
+    dirname = os.path.dirname(safetensors_filename)
     os.makedirs(dirname, exist_ok=True)
-    save_file(s_model, sf_filename, metadata={"format": "pt"})
-    check_file_size(sf_filename, pt_filename)
-    reloaded = load_file(sf_filename)
-
-    if not torch.equal(model_tensors, reloaded["emb_params"]):
+    # Save the model parameters to the output file
+    save_file(model_to_save, safetensors_filename, metadata={"format": "pt"})
+    # Check that the output file size is not too large
+    check_file_size(safetensors_filename, input_filename)
+    # Load the saved model parameters to verify that they were saved correctly
+    reloaded = load_file(safetensors_filename)
+    
+    if "reloaded" in reloaded and not torch.equal(model_tensors, reloaded["emb_params"]):
         raise RuntimeError("The output tensors do not match")
+    elif not torch.equal(model_tensors, reloaded.popitem()[1]):
+        raise RuntimeError("The output tensors do not match")
+
 
 def download_and_convert_pickletensor(pt_url: str, model_metadata: dict):
     response = requests.get(pt_url, timeout=5)
@@ -70,4 +108,3 @@ def download_and_convert_pickletensor(pt_url: str, model_metadata: dict):
         outfile.write(response.content)
 
     convert_file(filename, filename.with_suffix('.safetensors'))
-
