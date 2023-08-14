@@ -5,6 +5,7 @@ from hordeling.flask import cache
 from loguru import logger
 from hordeling import exceptions as e
 from hordeling import civitai
+from hordeling.safetensors import download_and_convert_pickletensor
 
 api = Namespace('v1', 'API Version 1' )
 
@@ -46,4 +47,7 @@ class Embedding(Resource):
             raise e.BadRequest(f"{mmetadata['name']} is not an Embedding / Textual Inversion")
         if sft_download := civitai.get_safetensor(mmetadata):
             return {"url": sft_download},200
+        if pt_download := civitai.get_pickletensor(mmetadata):
+            download_and_convert_pickletensor(pt_download, mmetadata)
+
         return {"url": f"hello world {model_id} "},200

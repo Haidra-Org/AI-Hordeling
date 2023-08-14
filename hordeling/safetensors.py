@@ -1,8 +1,10 @@
 import os
+import requests
+import hashlib
 from collections import defaultdict
 from safetensors.torch import load_file, save_file
-
-
+from pathlib import Path
+from loguru import logger
 import torch
 
 def shared_pointers(tensors):
@@ -54,3 +56,21 @@ def convert_file(
         sf_tensor = reloaded[k]
         if not torch.equal(pt_tensor, sf_tensor):
             raise RuntimeError(f"The output tensors do not match for key {k}")
+
+def download_and_convert_pickletensor(pt_url: str, model_metadata: dict):
+    response = requests.get(pt_url, timeout=5)
+    hash_object = hashlib.sha256()
+    hash_object.update(response.content)
+    sha256 = hash_object.hexdigest()
+    for f in model_metadata["modelVersions"][0]["files"]:
+        if f["downloadUrl"] == pt_url:
+            if f["hashes"]["SHA256"].lower() != sha256.lower():
+                logger.debug([f["hashes"]["SHA256"],hash_object])
+                raise Exception("Downloaded file does not match hash")
+            else:
+                filename = Path("models/" + f["name"])
+    os.makedirs(filename.parents[0], exist_ok=True)
+    with open(filename, "wb") as outfile:
+        outfile.write(response.content)
+
+    convert_file(filename, filename.with_suffix('.safetensors'))
