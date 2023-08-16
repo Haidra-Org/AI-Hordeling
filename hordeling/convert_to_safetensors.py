@@ -35,8 +35,8 @@ def check_file_size(sf_filename: str, pt_filename: str):
 
 
 def convert_file(
-    input_filename: str,  
-    safetensors_filename: str, 
+    input_filename: str,
+    safetensors_filename: str,
 ):
     """Convert a PyTorch model (*.pt or *.bin) to SafeTensors format
 
@@ -50,10 +50,10 @@ def convert_file(
 
     # Get the file extension
     extension = Path(input_filename).suffix
-    
+
     model_to_save = None
     model_tensors = None
-    
+
     # If the file is a PyTorch .pt file
     if extension == ".pt":
         # Get the model tensors
@@ -84,27 +84,21 @@ def convert_file(
     check_file_size(safetensors_filename, input_filename)
     # Load the saved model parameters to verify that they were saved correctly
     reloaded = load_file(safetensors_filename)
-    
+
     if "reloaded" in reloaded and not torch.equal(model_tensors, reloaded["emb_params"]):
         raise RuntimeError("The output tensors do not match")
     elif not torch.equal(model_tensors, reloaded.popitem()[1]):
         raise RuntimeError("The output tensors do not match")
 
 
-def download_and_convert_pickletensor(pt_url: str, model_metadata: dict):
-    response = requests.get(pt_url, timeout=5)
+def download_and_convert_pickletensor(civitai_model):
+    response = requests.get(civitai_model.pickletensor_url, timeout=5)
     hash_object = hashlib.sha256()
     hash_object.update(response.content)
     sha256 = hash_object.hexdigest()
-    for f in model_metadata["modelVersions"][0]["files"]:
-        if f["downloadUrl"] == pt_url:
-            if f["hashes"]["SHA256"].lower() != sha256.lower():
-                logger.debug([f["hashes"]["SHA256"],hash_object])
-                raise Exception("Downloaded file does not match hash")
-            else:
-                filename = Path("models/" + f["name"])
-    os.makedirs(filename.parents[0], exist_ok=True)
-    with open(filename, "wb") as outfile:
+    if civitai_model.pickletensor_hash.lower() != sha256.lower():
+        raise Exception("Downloaded file does not match hash")
+    civitai_model.ensure_dir_exists()
+    with open(civitai_model.filename, "wb") as outfile:
         outfile.write(response.content)
-
-    convert_file(filename, filename.with_suffix('.safetensors'))
+    convert_file(civitai_model.filepath, civitai_model.get_safetensor_filepath())

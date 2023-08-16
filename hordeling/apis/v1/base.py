@@ -4,8 +4,7 @@ from flask_restx import Namespace, Resource, reqparse
 from hordeling.flask import cache
 from loguru import logger
 from hordeling import exceptions as e
-from hordeling import civitai
-from hordeling.convert_to_safetensors import download_and_convert_pickletensor
+from hordeling.civitai import CivitAIModel
 
 api = Namespace('v1', 'API Version 1' )
 
@@ -40,14 +39,11 @@ class Embedding(Resource):
         self.args = self.get_parser.parse_args()
         if not model_id.isdigit():
             raise e.BadRequest("You can only pass CivitAI mdoel IDs")
-        mmetadata = civitai.retrieve_model_metadata(model_id)
-        if not civitai.is_safe(mmetadata):
-            raise e.BadRequest(f"{mmetadata['name']} has not passed the CivitAI pickle scanner succesfully")
-        if mmetadata["type"] != "TextualInversion":
-            raise e.BadRequest(f"{mmetadata['name']} is not an Embedding / Textual Inversion")
-        if sft_download := civitai.get_safetensor(mmetadata):
-            return {"url": sft_download},200
-        if pt_download := civitai.get_pickletensor(mmetadata):
-            download_and_convert_pickletensor(pt_download, mmetadata)
-
-        return {"url": f"hello world {model_id} "},200
+        model: CivitAIModel = CivitAIModel(model_id)
+        if not model.is_valid():
+            raise e.ServiceUnavailable("Problem retrieving model info from CivitAI, please try again later.")
+        if not model:
+            raise e.BadRequest(f"{model.name} has not passed the CivitAI pickle scanner succesfully")
+        if model.type != "TextualInversion":
+            raise e.BadRequest(f"{model.name} is not an Embedding / Textual Inversion")
+        return {"url": model.get_safetensors_download()},200
