@@ -33,7 +33,9 @@ class CivitAIModel:
         if self.model_metadata is None:
             return False
         if self.pickletensor_url is None and self.safetensor_url is None:
+            logger.debug(self.pickletensor_url)
             return False
+
 
     @property
     def fault_msg(self):
