@@ -102,4 +102,5 @@ def  download_and_convert_pickletensor(civitai_model):
     with open(civitai_model.filename, "wb") as outfile:
         outfile.write(response.content)
         logger.debug(civitai_model.filename)
+        logger.debug(civitai_model.pickletensor_url)
     convert_file(civitai_model.filepath, civitai_model.get_safetensor_filepath())
