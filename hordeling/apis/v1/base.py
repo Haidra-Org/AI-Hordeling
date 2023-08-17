@@ -30,7 +30,6 @@ class Embedding(Resource):
     get_parser.add_argument("Client-Agent", default="unknown:0:unknown", type=str, required=False, help="The client name and version.", location="headers")
 
     @api.expect(get_parser)
-    @logger.catch(reraise=True)
     @cache.cached(timeout=10, query_string=True)
     @api.marshal_with(models.response_model_download_url, code=200, description='Download URL', skip_none=True)
     def get(self, model_id: str):
