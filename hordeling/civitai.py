@@ -74,8 +74,7 @@ class CivitAIModel:
     def set_pickletensor(self):
         files = self.model_metadata["modelVersions"][0]["files"]
         for f in files:
-            logger.debug(f["metadata"]["format"])
-            if f["metadata"]["format"] == "Other" and f["name"].endwith(".pt"):
+            if f["metadata"]["format"] == "Other" and f["name"].endswith(".pt"):
                 f["metadata"]["format"] = "PickleTensor"
             if f["metadata"]["format"] == "PickleTensor":
                 self.pickletensor_url = f["downloadUrl"]
