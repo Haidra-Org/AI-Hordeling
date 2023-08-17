@@ -76,6 +76,7 @@ class CivitAIModel:
         for f in files:
             if f["metadata"]["format"] == "Other" and f["name"].endswith(".pt"):
                 f["metadata"]["format"] = "PickleTensor"
+            logger.debug(f["metadata"]["format"])
             if f["metadata"]["format"] == "PickleTensor":
                 self.pickletensor_url = f["downloadUrl"]
                 self.pickletensor_hash = f["hashes"]["SHA256"]
