@@ -40,7 +40,10 @@ class Embedding(Resource):
             raise e.BadRequest("You can only pass CivitAI mdoel IDs")
         model: CivitAIModel = CivitAIModel(model_id)
         if not model.is_valid():
-            raise e.ServiceUnavailable(model.fault_msg)
+            if model.rc == 404:
+                raise e.NotFound(model.fault_msg)
+            else:
+                raise e.ServiceUnavailable(model.fault_msg)
         if not model:
             raise e.BadRequest(f"{model.name} has not passed the CivitAI pickle scanner succesfully")
         if model.type != "TextualInversion":

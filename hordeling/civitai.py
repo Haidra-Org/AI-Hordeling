@@ -17,7 +17,8 @@ class CivitAIModel:
     pickletensor_id: str = None
     filename: Path = None
     filepath: Path = None
-    _fault_msg:str = None
+    _fault_msg:  str = None
+    rc: int = 200
 
     def __init__(self, model_id):
         self.model_metadata = self.retrieve_model_metadata(model_id)
@@ -48,6 +49,7 @@ class CivitAIModel:
         try:
             civreq = requests.get(f"https://civitai.com/api/v1/models/{model_id}", timeout=5)
             if not civreq.ok:
+                self.rc = civreq.status_code
                 if civreq.status_code == 404:
                     self._fault_msg = f"Model {model_id} does not exist"
                 else:
