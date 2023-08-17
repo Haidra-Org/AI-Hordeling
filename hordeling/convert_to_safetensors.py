@@ -91,7 +91,7 @@ def convert_file(
         raise RuntimeError("The output tensors do not match")
 
 
-def download_and_convert_pickletensor(civitai_model):
+def  download_and_convert_pickletensor(civitai_model):
     response = requests.get(civitai_model.pickletensor_url, timeout=5)
     hash_object = hashlib.sha256()
     hash_object.update(response.content)
@@ -101,4 +101,5 @@ def download_and_convert_pickletensor(civitai_model):
     civitai_model.ensure_dir_exists()
     with open(civitai_model.filename, "wb") as outfile:
         outfile.write(response.content)
+        logger.debug(civitai_model.filename)
     convert_file(civitai_model.filepath, civitai_model.get_safetensor_filepath())
