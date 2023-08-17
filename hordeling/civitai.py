@@ -33,8 +33,8 @@ class CivitAIModel:
         if self.model_metadata is None:
             return False
         if self.pickletensor_url is None and self.safetensor_url is None:
-            logger.debug(self.pickletensor_url)
             return False
+        return True
 
 
     @property
@@ -78,14 +78,12 @@ class CivitAIModel:
         for f in files:
             if f["metadata"]["format"] == "Other" and f["name"].endswith(".pt"):
                 f["metadata"]["format"] = "PickleTensor"
-            logger.debug(f["metadata"]["format"])
             if f["metadata"]["format"] == "PickleTensor":
                 self.pickletensor_url = f["downloadUrl"]
                 self.pickletensor_hash = f["hashes"]["SHA256"]
                 self.filename = Path(f["name"])
                 self.filepath = Path("models/" + f["name"])
                 self.pickletensor_id = f["id"]
-                logger.debug(self.pickletensor_url)
 
     def get_safetensor_filepath(self):
         # We attach the model filepath id in the filepath to know if it's receiverd a new version
