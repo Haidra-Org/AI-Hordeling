@@ -17,7 +17,7 @@ class CivitAIModel:
     pickletensor_id: str = None
     filename: Path = None
     filepath: Path = None
-    fault_msg:str = None
+    _fault_msg:str = None
 
     def __init__(self, model_id):
         self.model_metadata = self.retrieve_model_metadata(model_id)
@@ -30,22 +30,31 @@ class CivitAIModel:
         self.name = self.model_metadata['name']
 
     def is_valid(self):
+        if self.pickletensor_url is None and self.safetensor_url is None:
+            return False
         return self.model_metadata is not None
+
+    @property
+    def fault_msg(self):
+        if self._fault_msg is not None:
+            return self._fault_msg
+        if self.pickletensor_url is None and self.safetensor_url is None:
+            return f"The model '{self.name}' is of an unexpected type"
 
     def retrieve_model_metadata(self, model_id):
         try:
             civreq = requests.get(f"https://civitai.com/api/v1/models/{model_id}", timeout=5)
             if not civreq.ok:
                 if civreq.status_code == 404:
-                    self.fault_msg = f"Model {model_id} does not exist"
+                    self._fault_msg = f"Model {model_id} does not exist"
                 else:
-                    self.fault_msg = f"Error {civreq.status_code} when retrieving CivitAI metadata for {model_id}: {civreq.text}"
-                logger.error(self.fault_msg)
+                    self._fault_msg = f"Error {civreq.status_code} when retrieving CivitAI metadata for {model_id}: {civreq.text}"
+                logger.error(self._fault_msg)
                 return
             return civreq.json()
         except Exception as err:
-            self.fault_msg = f"Exception when retrieving CivitAI metadata for {model_id} with error: {err}"
-            logger.error(self.fault_msg)
+            self._fault_msg = f"Exception when retrieving CivitAI metadata for {model_id} with error: {err}"
+            logger.error(self._fault_msg)
 
     def set_safe(self):
         files = self.model_metadata["modelVersions"][0]["files"]
@@ -64,6 +73,8 @@ class CivitAIModel:
     def set_pickletensor(self):
         files = self.model_metadata["modelVersions"][0]["files"]
         for f in files:
+            if  f["metadata"]["format"] == "Other" and f["name"].endwith(".pt"):
+                f["metadata"]["format"] = "PickleTensor"
             if f["metadata"]["format"] == "PickleTensor":
                 self.pickletensor_url = f["downloadUrl"]
                 self.pickletensor_hash = f["hashes"]["SHA256"]
