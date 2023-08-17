@@ -21,7 +21,7 @@ class CivitAIModel:
 
     def __init__(self, model_id):
         self.model_metadata = self.retrieve_model_metadata(model_id)
-        if not self.is_valid():
+        if self.model_metadata is None:
             return
         self.type = self.model_metadata['type']
         self.name = self.model_metadata['name']
@@ -30,9 +30,10 @@ class CivitAIModel:
         self.set_pickletensor()
 
     def is_valid(self):
+        if self.model_metadata is None:
+            return False
         if self.pickletensor_url is None and self.safetensor_url is None:
             return False
-        return self.model_metadata is not None
 
     @property
     def fault_msg(self):
