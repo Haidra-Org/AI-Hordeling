@@ -17,6 +17,7 @@ class CivitAIModel:
     pickletensor_id: str = None
     filename: Path = None
     filepath: Path = None
+    fault_msg:str = None
 
     def __init__(self, model_id):
         self.model_metadata = self.retrieve_model_metadata(model_id)
@@ -35,11 +36,16 @@ class CivitAIModel:
         try:
             civreq = requests.get(f"https://civitai.com/api/v1/models/{model_id}", timeout=5)
             if not civreq.ok:
-                logger.error(f"Error when retrieving CivitAI metadata for {model_id}: {civreq.text}")
+                if civreq.status_code == 404:
+                    self.fault_msg = f"Model {model_id} does not exist"
+                else:
+                    self.fault_msg = f"Error {civreq.status_code} when retrieving CivitAI metadata for {model_id}: {civreq.text}"
+                logger.error(self.fault_msg)
                 return
             return civreq.json()
         except Exception as err:
-            logger.error(f"Exception when retrieving CivitAI metadata for {model_id} with error: {err}")
+            self.fault_msg = f"Exception when retrieving CivitAI metadata for {model_id} with error: {err}"
+            logger.error(self.fault_msg)
 
     def set_safe(self):
         files = self.model_metadata["modelVersions"][0]["files"]
