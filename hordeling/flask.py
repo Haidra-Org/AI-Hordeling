@@ -2,7 +2,7 @@ import os
 from flask import Flask, redirect
 from flask_caching import Cache
 from werkzeug.middleware.proxy_fix import ProxyFix
-from flask_sqlalchemy import SQLAlchemy
+# from flask_sqlalchemy import SQLAlchemy
 from loguru import logger
 
 cache = None
