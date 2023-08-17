@@ -83,6 +83,7 @@ class CivitAIModel:
                 self.filename = Path(f["name"])
                 self.filepath = Path("models/" + f["name"])
                 self.pickletensor_id = f["id"]
+                logger.debug(self.pickletensor_url)
 
     def get_safetensor_filepath(self):
         # We attach the model filepath id in the filepath to know if it's receiverd a new version
