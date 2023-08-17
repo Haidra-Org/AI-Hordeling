@@ -99,10 +99,7 @@ def  download_and_convert_pickletensor(civitai_model):
     if civitai_model.pickletensor_hash.lower() != sha256.lower():
         raise Exception("Downloaded file does not match hash")
     civitai_model.ensure_dir_exists()
-    with open(civitai_model.filename, "wb") as outfile:
+    with open(civitai_model.filepath, "wb") as outfile:
     # with open("negative_hand-neg.pt", "wb") as outfile:
         w = outfile.write(response.content)
-        logger.debug(civitai_model.filename)
-        logger.debug(civitai_model.pickletensor_url)
-        logger.debug(w)
     convert_file(civitai_model.filepath, civitai_model.get_safetensor_filepath())
