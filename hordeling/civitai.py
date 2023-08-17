@@ -105,5 +105,5 @@ class CivitAIModel:
             if not r2.check_safetensor(self.get_safetensor_filename()):
                 download_and_convert_pickletensor(self)
                 r2.upload_safetensor(self)
-                logger.debug("upload")
+                logger.info(f"Converted and uploaded {self.name}")
             return r2.generate_safetensor_download_url(self.get_safetensor_filename())
