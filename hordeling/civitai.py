@@ -23,11 +23,11 @@ class CivitAIModel:
         self.model_metadata = self.retrieve_model_metadata(model_id)
         if not self.is_valid():
             return
+        self.type = self.model_metadata['type']
+        self.name = self.model_metadata['name']
         self.set_safe()
         self.set_safetensor()
         self.set_pickletensor()
-        self.type = self.model_metadata['type']
-        self.name = self.model_metadata['name']
 
     def is_valid(self):
         if self.pickletensor_url is None and self.safetensor_url is None:
@@ -73,7 +73,9 @@ class CivitAIModel:
     def set_pickletensor(self):
         files = self.model_metadata["modelVersions"][0]["files"]
         for f in files:
-            if  f["metadata"]["format"] == "Other" and f["name"].endwith(".pt"):
+            if f["metadata"]["format"] == "Other":
+                logger.debug(f["name"])
+            if f["metadata"]["format"] == "Other" and f["name"].endwith(".pt"):
                 f["metadata"]["format"] = "PickleTensor"
             if f["metadata"]["format"] == "PickleTensor":
                 self.pickletensor_url = f["downloadUrl"]
