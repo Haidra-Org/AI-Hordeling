@@ -10,4 +10,5 @@ class Models:
         })
         self.response_model_download_url = api.model('DownloadURL', {
             'url': fields.String(description="The download url for the provided model"),
+            'sha256': fields.String(description="The hash of the safetensor file. If empty, the one from CivitAI should be used"),
         })

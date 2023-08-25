@@ -2,11 +2,14 @@ import os
 import requests
 from loguru import logger
 from pathlib import Path
-from hordeling.convert_to_safetensors import download_and_convert_pickletensor
+import hashlib
+from hordeling.convert_to_safetensors import download_and_convert_pickletensor, download_created_safetensor
 from hordeling import r2
+from hordeling import hordeling_redis
 
 class CivitAIModel:
 
+    model_id: int = None
     model_metadata: dict = {}
     type: str = None
     name: str = None
@@ -21,6 +24,7 @@ class CivitAIModel:
     rc: int = 200
 
     def __init__(self, model_id):
+        self.model_id = model_id
         self.model_metadata = self.retrieve_model_metadata(model_id)
         if self.model_metadata is None:
             return
@@ -107,3 +111,21 @@ class CivitAIModel:
                 r2.upload_safetensor(self)
                 logger.info(f"Converted and uploaded {self.name}")
             return r2.generate_safetensor_download_url(self.get_safetensor_filename())
+
+    def get_sha256(self):
+        hash = hordeling_redis.hordeling_r_get(self.model_id)
+        if hash is None:
+            stpath = Path(self.get_safetensor_filepath())
+            if not stpath.exists():
+                download_created_safetensor(self)
+            return self.store_sha256()
+        return hash
+
+    def store_sha256(self):
+        hash_object = hashlib.sha256()
+        with open(self.get_safetensor_filepath(), "rb") as file:
+            while chunk := file.read(8192):  # Read the file in chunks of 8KB
+                hash_object.update(chunk)
+        sha256 = hash_object.hexdigest()
+        hordeling_redis.hordeling_r_set(self.model_id,sha256)
+        return sha256

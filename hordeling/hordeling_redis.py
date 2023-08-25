@@ -1,0 +1,104 @@
+from datetime import timedelta
+import json
+from threading import Lock
+
+from hordeling.redis_ctrl import get_hordeling_db, is_redis_up, get_all_redis_db_servers
+from loguru import logger
+
+locks = {}
+
+hordeling_r = None
+all_hordeling_redis = []
+logger.init("Horde Redis", status="Connecting")
+if is_redis_up():
+    hordeling_r = get_hordeling_db()
+    all_hordeling_redis = get_all_redis_db_servers()
+    logger.init_ok("Horde Redis", status="Connected")
+else:
+    logger.init_err("Horde Redis", status="Failed")
+
+
+horde_local_r = None
+# logger.init("Horde Local Redis", status="Connecting")
+# if is_local_redis_up():
+#     horde_local_r = get_local_horde_db()
+#     logger.init_ok("Horde Local Redis", status="Connected")
+# else:
+#     logger.init_err("Horde Local Redis", status="Failed")
+
+def hordeling_r_set(key, value):
+    for hr in all_hordeling_redis:
+        hr.set(key, value)
+    if horde_local_r:
+        horde_local_r.setex(key, timedelta(10), value)
+
+def hordeling_r_setex(key, expiry, value):
+    for hr in all_hordeling_redis:
+        hr.setex(key, expiry, value)
+    # We don't keep local cache for more than 5 seconds
+    if expiry > timedelta(5):
+        expiry = timedelta(5)
+    if horde_local_r:
+        horde_local_r.setex(key, expiry, value)
+
+
+def hordeling_r_setex_json(key, expiry, value):
+    """Same as hordeling_r_setex()
+    but also converts the python builtin value to json
+    """
+    hordeling_r_setex(key, expiry, json.dumps(value))
+
+
+def hordeling_r_local_set_to_json(key, value):
+    if horde_local_r:
+        if key not in locks:
+            locks[key] = Lock()
+        locks[key].acquire()
+        try:
+            horde_local_r.set(key, json.dumps(value))
+        except Exception as err:
+            logger.error(f"Something went wrong when setting local redis: {e}")
+        locks[key].release()
+
+def horde_local_setex_to_json(key, seconds, value):
+    if horde_local_r:
+        if key not in locks:
+            locks[key] = Lock()
+        locks[key].acquire()
+        try:
+            horde_local_r.setex(key, timedelta(seconds=seconds), json.dumps(value))
+        except Exception as err:
+            logger.error(f"Something went wrong when setting local redis: {e}")
+        locks[key].release()
+
+def hordeling_r_get(key):
+    """Retrieves the value from local redis if it exists
+    If it doesn't exist retrieves it from remote redis
+    If it exists in remote redis, also stores it in local redis
+    """
+    value = None
+    if horde_local_r:
+        # if key in ["worker_cache","worker_cache_privileged"]:
+        #     logger.warning(f"Got {key} from Local")
+        value = horde_local_r.get(key)
+    if value is None and hordeling_r:
+        value = hordeling_r.get(key)
+        if value is not None and horde_local_r is not None:
+            ttl = hordeling_r.ttl(key)
+            if ttl > 5:
+                ttl = 5
+            if ttl <= 0:
+                ttl = 2
+            # The local redis cache is always very temporary
+            if value is not None:
+                horde_local_r.setex(key, timedelta(seconds=abs(ttl)), value)
+    return value
+
+def hordeling_r_get_json(key):
+    """Same as hordeling_r_get()
+    but also converts the json to python built-ins
+    """
+    value = hordeling_r_get(key)
+    if value is None:
+        return None
+    return json.loads(value)

@@ -48,4 +48,7 @@ class Embedding(Resource):
             raise e.BadRequest(f"{model.name} has not passed the CivitAI pickle scanner succesfully")
         if model.type != "TextualInversion":
             raise e.BadRequest(f"{model.name} is not an Embedding / Textual Inversion")
-        return {"url": model.get_safetensors_download()},200
+        return {
+            "url": model.get_safetensors_download(),
+            "sha256": model.get_sha256(),
+            },200

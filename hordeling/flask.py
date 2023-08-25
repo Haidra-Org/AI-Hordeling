@@ -4,6 +4,7 @@ from flask_caching import Cache
 from werkzeug.middleware.proxy_fix import ProxyFix
 # from flask_sqlalchemy import SQLAlchemy
 from loguru import logger
+from hordeling.redis_ctrl import is_redis_up, ger_cache_url
 
 cache = None
 APP = Flask(__name__)
@@ -30,6 +31,21 @@ APP.wsgi_app = ProxyFix(APP.wsgi_app, x_for=1)
 # logger.init_ok("Safetensor API Database", status="Started")
 
 # Allow local workstation run
+if is_redis_up():
+    try:
+        cache_config = {
+            "CACHE_REDIS_URL": ger_cache_url(),
+            "CACHE_TYPE": "RedisCache",  
+            "CACHE_DEFAULT_TIMEOUT": 300
+        }
+        cache = Cache(config=cache_config)
+        cache.init_app(APP)
+        logger.init_ok("Flask Cache", status="Connected")
+    except Exception as e:
+        logger.error(f"Flask Cache Failed: {e}")
+        pass
+
+# Allow local workstation run
 if cache is None:
     cache_config = {
         "CACHE_TYPE": "SimpleCache",
@@ -38,3 +54,4 @@ if cache is None:
     cache = Cache(config=cache_config)
     cache.init_app(APP)
     logger.init_warn("Flask Cache", status="SimpleCache")
+

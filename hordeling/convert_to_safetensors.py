@@ -8,8 +8,6 @@ from pathlib import Path
 from loguru import logger
 import torch
 
-from pathlib import Path
-
 def shared_pointers(tensors):
     ptrs = defaultdict(list)
     for k, v in tensors.items():
@@ -91,7 +89,7 @@ def convert_file(
         raise RuntimeError("The output tensors do not match")
 
 
-def  download_and_convert_pickletensor(civitai_model):
+def download_and_convert_pickletensor(civitai_model):
     response = requests.get(civitai_model.pickletensor_url, timeout=5)
     hash_object = hashlib.sha256()
     hash_object.update(response.content)
@@ -103,3 +101,11 @@ def  download_and_convert_pickletensor(civitai_model):
     # with open("negative_hand-neg.pt", "wb") as outfile:
         w = outfile.write(response.content)
     convert_file(civitai_model.filepath, civitai_model.get_safetensor_filepath())
+
+def download_created_safetensor(civitai_model):
+    response = requests.get(civitai_model.r2.generate_safetensor_download_url(civitai_model.get_safetensor_filename()), timeout=5)
+    civitai_model.ensure_dir_exists()
+    with open(civitai_model.get_safetensor_filepath(), "wb") as outfile:
+    # with open("negative_hand-neg.pt", "wb") as outfile:
+        w = outfile.write(response.content)
+    
