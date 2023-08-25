@@ -15,3 +15,4 @@ boto3
 --extra-index-url https://download.pytorch.org/whl/cpu
 torch
 numpy
+redis~=4.3.5

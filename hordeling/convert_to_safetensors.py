@@ -7,6 +7,7 @@ from collections import defaultdict
 from pathlib import Path
 from loguru import logger
 import torch
+from hordeling import r2
 
 def shared_pointers(tensors):
     ptrs = defaultdict(list)
@@ -103,7 +104,7 @@ def download_and_convert_pickletensor(civitai_model):
     convert_file(civitai_model.filepath, civitai_model.get_safetensor_filepath())
 
 def download_created_safetensor(civitai_model):
-    response = requests.get(civitai_model.r2.generate_safetensor_download_url(civitai_model.get_safetensor_filename()), timeout=5)
+    response = requests.get(r2.generate_safetensor_download_url(civitai_model.get_safetensor_filename()), timeout=5)
     civitai_model.ensure_dir_exists()
     with open(civitai_model.get_safetensor_filepath(), "wb") as outfile:
     # with open("negative_hand-neg.pt", "wb") as outfile:
