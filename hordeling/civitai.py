@@ -113,6 +113,8 @@ class CivitAIModel:
             return r2.generate_safetensor_download_url(self.get_safetensor_filename())
 
     def get_sha256(self):
+        if self.safetensor_url is not None:
+            return None
         hash = hordeling_redis.hordeling_r_get(self.model_id)
         if hash is None:
             stpath = Path(self.get_safetensor_filepath())
