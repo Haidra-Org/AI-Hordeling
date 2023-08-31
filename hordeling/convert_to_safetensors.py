@@ -63,16 +63,15 @@ def convert_file(
             'emb_params': model_tensors
         }
 
-    # If the file is a fairseq .bin file
     if extension == ".bin":
-        # Remove shared weights from the model
-        shared = shared_pointers(loaded_model)
-        for shared_weights in shared:
-            for name in shared_weights[1:]:
-                loaded_model.pop(name)
-        # Create a dictionary with the model parameters
-        model_to_save = {k: v.contiguous() for k, v in loaded_model.items()}
-        model_tensors = list(model_to_save.values())[0]
+        if 'string_to_param' in loaded_model:
+            model_tensors = loaded_model.get('string_to_param').get('*')
+            model_to_save = {
+                'emb_params': model_tensors
+            }
+        else:
+            raise NotImplementedError(f"This model's data is unsupported: {input_filename}")
+
 
     # Create the output directory if it doesn't exist
     dirname = os.path.dirname(safetensors_filename)
@@ -101,7 +100,11 @@ def download_and_convert_pickletensor(civitai_model):
     with open(civitai_model.filepath, "wb") as outfile:
     # with open("negative_hand-neg.pt", "wb") as outfile:
         w = outfile.write(response.content)
-    convert_file(civitai_model.filepath, civitai_model.get_safetensor_filepath())
+    try:
+        convert_file(civitai_model.filepath, civitai_model.get_safetensor_filepath())
+    except NotImplementedError as e:
+        logger.warning(f"Could not convert {civitai_model.model_id} ({civitai_model.name}) to safetensors: {e}")
+        raise e
 
 def download_created_safetensor(civitai_model):
     response = requests.get(r2.generate_safetensor_download_url(civitai_model.get_safetensor_filename()), timeout=5)
