@@ -8,6 +8,7 @@ from pathlib import Path
 from loguru import logger
 import torch
 from hordeling import r2
+from hordeling import exceptions as e
 
 def shared_pointers(tensors):
     ptrs = defaultdict(list)
@@ -95,7 +96,7 @@ def download_and_convert_pickletensor(civitai_model):
     hash_object.update(response.content)
     sha256 = hash_object.hexdigest()
     if civitai_model.pickletensor_hash.lower() != sha256.lower():
-        raise Exception("Downloaded file does not match hash")
+        raise e.BadRequest("Downloaded file does not match hash")
     civitai_model.ensure_dir_exists()
     with open(civitai_model.filepath, "wb") as outfile:
     # with open("negative_hand-neg.pt", "wb") as outfile:
