@@ -103,9 +103,9 @@ def download_and_convert_pickletensor(civitai_model):
         w = outfile.write(response.content)
     try:
         convert_file(civitai_model.filepath, civitai_model.get_safetensor_filepath())
-    except NotImplementedError as e:
-        logger.warning(f"Could not convert {civitai_model.model_id} ({civitai_model.name}) to safetensors: {e}")
-        raise e
+    except NotImplementedError as err:
+        logger.warning(f"Could not convert {civitai_model.model_id} ({civitai_model.name}) to safetensors: {err}")
+        raise err
 
 def download_created_safetensor(civitai_model):
     response = requests.get(r2.generate_safetensor_download_url(civitai_model.get_safetensor_filename()), timeout=5)
